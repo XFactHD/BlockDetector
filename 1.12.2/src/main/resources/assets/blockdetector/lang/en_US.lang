@@ -1,0 +1,7 @@
+tile.blockdetector:block_block_detector.name=Block Detector
+blockdetector:signaltype.normal.name=Normal
+blockdetector:signaltype.inverted.name=Inverted
+blockdetector:signaltype.pulse.name=Pulse
+desc.blockdetector:normal.name=Emit a redstone signal when the|block is equal to the filter
+desc.blockdetector:inverted.name=Emit a redstone signal when the|block is not equal to the filter
+desc.blockdetector:pulse.name=Emit a redstone pulse when the|block changes

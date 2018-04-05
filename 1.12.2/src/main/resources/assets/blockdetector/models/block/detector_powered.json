@@ -1,0 +1,6 @@
+{
+    "parent": "blockdetector:block/detector",
+    "textures": {
+        "bottom": "blocks/observer_back_lit"
+    }
+}
