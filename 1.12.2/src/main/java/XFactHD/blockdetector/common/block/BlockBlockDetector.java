@@ -1,4 +1,4 @@
-/*  Copyright (C) <2017>  <XFactHD>
+/*  Copyright (C) <2018>  <XFactHD>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -103,7 +103,7 @@ public class BlockBlockDetector extends Block
     @Override
     public boolean canConnectRedstone(IBlockState state, IBlockAccess world, BlockPos pos, @Nullable EnumFacing side)
     {
-        return side != state.getValue(FACING).getOpposite();
+        return side == state.getValue(FACING);
     }
 
     @Override
@@ -129,7 +129,7 @@ public class BlockBlockDetector extends Block
     @Override
     public int getStrongPower(IBlockState state, IBlockAccess world, BlockPos pos, EnumFacing side)
     {
-        if (side != state.getValue(FACING).getOpposite())
+        if (side == state.getValue(FACING))
         {
             TileEntity te = world.getTileEntity(pos);
             if (te instanceof TileEntityBlockDetector)

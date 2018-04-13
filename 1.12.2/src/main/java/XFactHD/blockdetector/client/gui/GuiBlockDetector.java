@@ -1,4 +1,4 @@
-/*  Copyright (C) <2017>  <XFactHD>
+/*  Copyright (C) <2018>  <XFactHD>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ public class GuiBlockDetector extends GuiContainer
         super(new ContainerBlockDetector(te, player));
         this.te = te;
         this.player = player;
-        filter = te.getBlockFilter() == Blocks.AIR ? ItemStack.EMPTY : new ItemStack(te.getBlockFilter());
+        filter = te.getBlockFilter() == Blocks.AIR ? ItemStack.EMPTY : (te.getBlockFilter() == Blocks.FIRE ? new ItemStack(Items.FLINT_AND_STEEL) : new ItemStack(te.getBlockFilter()));
         type = te.getSignalType();
         setGuiSize(176, 190);
     }

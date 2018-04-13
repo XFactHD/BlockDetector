@@ -1,4 +1,4 @@
-/*  Copyright (C) <2017>  <XFactHD>
+/*  Copyright (C) <2018>  <XFactHD>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ public class Reference
 {
     public static final String MOD_ID = "blockdetector";
     public static final String MOD_NAME = "BlockDetector";
-    public static final String VERSION = "1.0";
+    public static final String VERSION = "1.1";
     public static final String SERVER_PROXY = "XFactHD.blockdetector.common.CommonProxy";
     public static final String CLIENT_PROXY = "XFactHD.blockdetector.client.ClientProxy";
 }
