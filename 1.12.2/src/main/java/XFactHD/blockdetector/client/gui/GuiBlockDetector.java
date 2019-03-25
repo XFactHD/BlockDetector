@@ -253,7 +253,7 @@ public class GuiBlockDetector extends GuiContainer
                 return true;
             }
         }
-        return true;
+        return false;
     }
 
     private Block reverseMapGetBlock(ItemStack keyStack)
