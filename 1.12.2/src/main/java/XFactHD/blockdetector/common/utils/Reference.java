@@ -19,7 +19,7 @@ public class Reference
 {
     public static final String MOD_ID = "blockdetector";
     public static final String MOD_NAME = "BlockDetector";
-    public static final String VERSION = "1.1";
+    public static final String VERSION = "1.3";
     public static final String SERVER_PROXY = "XFactHD.blockdetector.common.CommonProxy";
     public static final String CLIENT_PROXY = "XFactHD.blockdetector.client.ClientProxy";
 }

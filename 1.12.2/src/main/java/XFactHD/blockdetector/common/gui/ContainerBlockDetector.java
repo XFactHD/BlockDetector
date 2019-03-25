@@ -25,6 +25,7 @@ public class ContainerBlockDetector extends Container
 {
     private TileEntityBlockDetector te;
     private TileEntityBlockDetector.SignalType lastType = TileEntityBlockDetector.SignalType.NORMAL;
+    public boolean filterChanged = false;
 
     public ContainerBlockDetector(TileEntityBlockDetector te, EntityPlayer player)
     {
@@ -34,12 +35,12 @@ public class ContainerBlockDetector extends Container
         {
             for (int x = 0; x < 9; ++x)
             {
-                addSlotToContainer(new Slot(player.inventory, x + y * 9 + 9, 8 + x * 18, 52 + y * 18));
+                addSlotToContainer(new Slot(player.inventory, x + y * 9 + 9, 8 + x * 18, 108 + y * 18));
             }
         }
         for (int x = 0; x < 9; ++x)
         {
-            addSlotToContainer(new Slot(player.inventory, x, 8 + x * 18, 110));
+            addSlotToContainer(new Slot(player.inventory, x, 8 + x * 18, 166));
         }
     }
 
@@ -55,6 +56,13 @@ public class ContainerBlockDetector extends Container
                 listener.sendWindowProperty(this, 0, lastType.ordinal());
             }
         }
+        if (te.hasFilterChanged())
+        {
+            for (IContainerListener listener : listeners)
+            {
+                listener.sendWindowProperty(this, 1, 1);
+            }
+        }
     }
 
     @Override
@@ -64,6 +72,10 @@ public class ContainerBlockDetector extends Container
         {
             lastType = TileEntityBlockDetector.SignalType.values()[data];
             te.setSignalType(lastType);
+        }
+        else if (id == 1)
+        {
+            filterChanged = true;
         }
     }
 

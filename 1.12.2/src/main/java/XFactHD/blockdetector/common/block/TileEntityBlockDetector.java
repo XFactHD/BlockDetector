@@ -15,11 +15,11 @@
 
 package XFactHD.blockdetector.common.block;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTUtil;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
@@ -31,17 +31,18 @@ import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
-import javax.annotation.Nullable;
 import java.util.Locale;
 
 public class TileEntityBlockDetector extends TileEntity implements ITickable
 {
     private EnumFacing facing = null;
     private SignalType signalType = SignalType.NORMAL;
+    private CheckMode checkMode = CheckMode.BLOCK;
     private boolean blockChanged = false;
+    private boolean filterChanged = false;
     private int pulseTicks = 0;
-    private Block blockFilter = Blocks.AIR;
-    private Block lastBlock = null;
+    private IBlockState stateFilter = Blocks.AIR.getDefaultState();
+    private IBlockState lastState = null;
 
     @Override
     public void update()
@@ -70,9 +71,9 @@ public class TileEntityBlockDetector extends TileEntity implements ITickable
     public void checkBlockUpdate(boolean forced)
     {
         IBlockState state = world.getBlockState(pos.offset(getFacing()));
-        if (state.getBlock() != lastBlock || forced)
+        if ((checkMode == CheckMode.STATE && state != lastState) || (checkMode == CheckMode.BLOCK && (lastState == null || state.getBlock() != lastState.getBlock())) || forced)
         {
-            lastBlock = state.getBlock();
+            lastState = state;
             blockChanged = true;
             world.notifyNeighborsOfStateChange(pos, world.getBlockState(pos).getBlock(), false);
             notifyBlockUpdate();
@@ -81,16 +82,17 @@ public class TileEntityBlockDetector extends TileEntity implements ITickable
 
     public int getPower()
     {
-        if (lastBlock == null) { checkBlockUpdate(false); }
+        if (lastState == null) { checkBlockUpdate(false); }
         if (blockChanged && signalType == SignalType.PULSE) { return 15; }
-        else if (signalType == SignalType.NORMAL) { return blockFilter == lastBlock ? 15 : 0; }
-        else if (signalType == SignalType.INVERTED) { return blockFilter == lastBlock ? 0 : 15; }
+        else if (signalType == SignalType.NORMAL) { return stateFilter == lastState ? 15 : 0; }
+        else if (signalType == SignalType.INVERTED) { return stateFilter == lastState ? 0 : 15; }
         return 0;
     }
 
-    public void setBlockFilter(Block block)
+    public void setStateFilter(IBlockState block)
     {
-        this.blockFilter = block;
+        this.stateFilter = block;
+        filterChanged = true;
         checkBlockUpdate(true);
         notifyBlockUpdate();
     }
@@ -102,14 +104,41 @@ public class TileEntityBlockDetector extends TileEntity implements ITickable
         notifyBlockUpdate();
     }
 
-    public Block getBlockFilter()
+    public void setCheckMode(CheckMode checkMode)
     {
-        return blockFilter;
+        this.checkMode = checkMode;
+        checkBlockUpdate(true);
+        notifyBlockUpdate();
+    }
+
+    public IBlockState getStateFilter()
+    {
+        return stateFilter;
     }
 
     public SignalType getSignalType()
     {
         return signalType;
+    }
+
+    public CheckMode getCheckMode()
+    {
+        return checkMode;
+    }
+
+    public void findBlock()
+    {
+        setStateFilter(world.getBlockState(pos.offset(getFacing())));
+    }
+
+    public boolean hasFilterChanged()
+    {
+        if (filterChanged)
+        {
+            filterChanged = false;
+            return true;
+        }
+        return false;
     }
 
     private EnumFacing getFacing()
@@ -129,17 +158,18 @@ public class TileEntityBlockDetector extends TileEntity implements ITickable
     public NBTTagCompound getUpdateTag()
     {
         NBTTagCompound nbt = new NBTTagCompound();
-        nbt.setString("lastBlock", lastBlock != null ? lastBlock.getRegistryName().toString() : "");
+        nbt.setTag("lastState", lastState == null ? new NBTTagCompound() : NBTUtil.writeBlockState(new NBTTagCompound(), lastState));
         nbt.setBoolean("changed", blockChanged);
         return writeToNBT(nbt);
     }
 
     @Override
-    public void handleUpdateTag(NBTTagCompound tag)
+    public void handleUpdateTag(NBTTagCompound nbt)
     {
-        super.handleUpdateTag(tag);
-        lastBlock = Block.getBlockFromName(tag.getString("lastBlock"));
-        blockChanged = tag.getBoolean("changed");
+        super.handleUpdateTag(nbt);
+        NBTTagCompound tag = nbt.getCompoundTag("lastState");
+        lastState = tag.getSize() == 0 ? null : NBTUtil.readBlockState(tag);
+        blockChanged = nbt.getBoolean("changed");
         world.markBlockRangeForRenderUpdate(pos, pos);
     }
 
@@ -161,8 +191,9 @@ public class TileEntityBlockDetector extends TileEntity implements ITickable
     {
         nbt = super.writeToNBT(nbt);
         nbt.setInteger("signal", signalType.ordinal());
-        if (blockFilter == null) { blockFilter = Blocks.AIR; }
-        nbt.setString("filter", blockFilter.getRegistryName().toString());
+        nbt.setInteger("mode", checkMode.ordinal());
+        if (stateFilter == null) { stateFilter = Blocks.AIR.getDefaultState(); }
+        nbt.setTag("filter", NBTUtil.writeBlockState(new NBTTagCompound(), stateFilter));
         return nbt;
     }
 
@@ -171,7 +202,8 @@ public class TileEntityBlockDetector extends TileEntity implements ITickable
     {
         super.readFromNBT(nbt);
         signalType = SignalType.values()[nbt.getInteger("signal")];
-        blockFilter = Block.getBlockFromName(nbt.getString("filter"));
+        checkMode = CheckMode.values()[nbt.getInteger("mode")];
+        stateFilter = NBTUtil.readBlockState(nbt.getCompoundTag("filter"));
     }
 
     @Override
@@ -201,6 +233,18 @@ public class TileEntityBlockDetector extends TileEntity implements ITickable
                 case PULSE: return new ResourceLocation("textures/items/redstone_dust.png");
             }
             return null;
+        }
+    }
+
+    public enum CheckMode
+    {
+        BLOCK,
+        STATE;
+
+        @SideOnly(Side.CLIENT)
+        public String getLocalizedName()
+        {
+            return I18n.format("blockdetector:checkmode." + toString().toLowerCase(Locale.ENGLISH) + ".name");
         }
     }
 }

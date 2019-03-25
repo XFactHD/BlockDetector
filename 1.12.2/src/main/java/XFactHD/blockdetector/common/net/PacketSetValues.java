@@ -18,6 +18,9 @@ package XFactHD.blockdetector.common.net;
 import XFactHD.blockdetector.common.block.TileEntityBlockDetector;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTUtil;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -30,17 +33,21 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 public class PacketSetValues implements IMessage
 {
     private BlockPos pos;
-    private Block filter;
+    private IBlockState filter;
+    private boolean findBlock;
     private TileEntityBlockDetector.SignalType type;
+    private TileEntityBlockDetector.CheckMode mode;
 
     @SuppressWarnings("unused")
     public PacketSetValues() {}
 
-    public PacketSetValues(BlockPos pos, Block filter, TileEntityBlockDetector.SignalType type)
+    public PacketSetValues(BlockPos pos, IBlockState filter, boolean findBlock, TileEntityBlockDetector.SignalType type, TileEntityBlockDetector.CheckMode mode)
     {
         this.pos = pos;
         this.filter = filter;
+        this.findBlock = findBlock;
         this.type = type;
+        this.mode = mode;
     }
 
     @Override
@@ -49,17 +56,27 @@ public class PacketSetValues implements IMessage
     {
         buf.writeLong(pos.toLong());
         buf.writeInt(type == null ? -1 : type.ordinal());
-        ByteBufUtils.writeUTF8String(buf, filter == null ? "null" : filter.getRegistryName().toString());
+        buf.writeInt(mode == null ? -1 : mode.ordinal());
+        buf.writeBoolean(findBlock);
+        ByteBufUtils.writeTag(buf, filter == null ? new NBTTagCompound() : NBTUtil.writeBlockState(new NBTTagCompound(), filter));
     }
 
     @Override
+    @SuppressWarnings("ConstantConditions")
     public void fromBytes(ByteBuf buf)
     {
         pos = BlockPos.fromLong(buf.readLong());
+
         int index = buf.readInt();
         type = index == -1 ? null : TileEntityBlockDetector.SignalType.values()[index];
-        String regName = ByteBufUtils.readUTF8String(buf);
-        filter = regName.equals("null") ? null : Block.getBlockFromName(regName);
+
+        index = buf.readInt();
+        mode = index == -1 ? null : TileEntityBlockDetector.CheckMode.values()[index];
+
+        findBlock = buf.readBoolean();
+
+        NBTTagCompound nbt = ByteBufUtils.readTag(buf);
+        filter = nbt.getSize() == 0 ? null : NBTUtil.readBlockState(nbt);
     }
 
     public static class Handler implements IMessageHandler<PacketSetValues, IMessage>
@@ -78,11 +95,19 @@ public class PacketSetValues implements IMessage
                     {
                         if (message.filter != null)
                         {
-                            ((TileEntityBlockDetector)te).setBlockFilter(message.filter);
+                            ((TileEntityBlockDetector)te).setStateFilter(message.filter);
+                        }
+                        if (message.findBlock)
+                        {
+                            ((TileEntityBlockDetector)te).findBlock();
                         }
                         if (message.type != null)
                         {
                             ((TileEntityBlockDetector)te).setSignalType(message.type);
+                        }
+                        if (message.mode != null)
+                        {
+                            ((TileEntityBlockDetector)te).setCheckMode(message.mode);
                         }
                     }
                 }
